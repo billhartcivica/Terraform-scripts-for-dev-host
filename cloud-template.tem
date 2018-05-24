@@ -1,0 +1,42 @@
+provider "aws" {
+  access_key = "${ACCESS_KEY}"
+  secret_key = "${SECRET_KEY}"
+  region     = "eu-west-2"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-62293306"
+  instance_type = "t2.micro"
+  key_name = "borneo"
+  root_block_device {
+    volume_type="gp2"
+    volume_size="30"
+    delete_on_termination = "true"
+    }
+  tags {
+    Name = "${MACHINE_NAME}"
+    project = "borneo"
+  }
+
+  connection {
+    type = "ssh"
+    user = "ubuntu"
+    private_key = "${file("borneo.pem")}"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo useradd -m ${USERNAME}",
+      "sudo echo '${USERNAME}:${USERPASS}' | sudo chpasswd"
+      ]
+  }
+}
+
+resource "aws_eip" "ip" {
+  instance = "${aws_instance.example.id}"
+}
+
+output "ip" {
+  value = "${aws_eip.ip.public_ip}"
+}
+
